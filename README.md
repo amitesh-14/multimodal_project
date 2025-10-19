@@ -67,6 +67,7 @@ This application relies on two external command-line tools that **must be instal
 ```bash
 git clone [https://github.com/your-username/multimodal-project.git](https://github.com/your-username/multimodal-project.git)
 cd multimodal-project
+```bash
 2. Create and Activate a Virtual Environment It's highly recommended to use a virtual environment.
 
 Bash
