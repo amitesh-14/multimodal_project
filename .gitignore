@@ -1,3 +1,4 @@
 .streamlit/secrets.toml
 vir/
 __pycache__/
+.gitignore
