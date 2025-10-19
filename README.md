@@ -67,16 +67,17 @@ This application relies on two external command-line tools that **must be instal
 ```bash
 git clone [https://github.com/your-username/multimodal-project.git](https://github.com/your-username/multimodal-project.git)
 cd multimodal-project
-```bash
+```
 2. Create and Activate a Virtual Environment It's highly recommended to use a virtual environment.
 
-Bash
+```bash
 
 # Create the environment
 python -m venv vir
 
 # Activate it (on Windows)
 .\vir\Scripts\activate
+```
 3. Install Python Packages Create a requirements.txt file with the contents below, then run pip install -r requirements.txt.
 
 <details> <summary>Click to see <strong>requirements.txt</strong></summary>
