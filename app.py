@@ -16,8 +16,9 @@ st.markdown("""
 This application allows you to build a knowledge base from various sources and ask questions about it.
 
 **Navigate using the sidebar on the left to:**
-1.  **Upload and Q&A:** Add new files (PDFs, documents, audio, video) or YouTube links to the knowledge base and ask questions.
-2.  **View Data:** See all the documents currently stored in your knowledge base and manage them.
+1.  **Upload :** Add new files (PDFs, documents, audio, video) or YouTube links to the knowledge base.
+2. **Ask Questions:** Query the knowledge base using natural language questions.            
+3.  **View Data:** See all the documents currently stored in your knowledge base and manage them.
 
 Select a page from the sidebar to get started!
 """)
