@@ -1,311 +1,168 @@
-
 # 🧠 Multimodal Q&A Assistant
 
-  
-
-This is a multi-page Streamlit application that allows you to build a persistent knowledge base by uploading various media types or adding YouTube links. You can then ask questions about the ingested content using Google's Gemini AI.
-
-  
-
-
-
-  
+This is a multi-page Streamlit application that allows you to build a persistent, Docker-based knowledge base by uploading various media types or adding YouTube links. You can then ask questions about the ingested content using Google's Gemini AI.
 
 ## ✨ Features
 
-  
-
-*  **Multi-Page Interface:** A clean, navigable UI with separate pages for uploading content and viewing your database.
-
-*  **Persistent Storage:** Uses **SQLite** to store all extracted text, creating a long-term knowledge base.
-
-*  **Multimodal File Support:** Extract text and data from:
-
-* PDFs (`.pdf`)
-
-* Word Documents (`.docx`)
-
-* Excel Files (`.xls`, `.xlsx`)
-
-* Images (OCR) (`.png`, `.jpg`, `.jpeg`)
-
-* Audio Files (`.mp3`, `.wav`, `.m4a`)
-
-* Video Files (`.mp4`, `.mov`, `.avi`)
-
-*  **YouTube Integration:** Automatically downloads and transcribes audio from any YouTube URL.
-
-*  **AI-Powered Q&A:** Uses **Google's Gemini** model to answer questions based *only* on the context you've provided.
-
-*  **Robust Audio Transcription:** Handles long audio files by intelligently chunking the audio to fit API limits.
-
-*  **Data Management:** A "View Data" page to see, preview, and delete individual entries from your knowledge base.
-
-  
+* **Dockerized Deployment:** The entire application, including all system dependencies (FFmpeg, Tesseract), is containerized for easy and reliable deployment.
+* **Persistent Storage:** Uses a **Docker Volume** to persist the SQLite database, meaning your data is safe even when you stop and restart the container.
+* **Multi-Page Interface:** A clean, navigable UI with separate pages for uploading content, asking questions, and viewing your database.
+* **Multimodal File Support:** Extract text and data from various file types (PDFs, DOCX, Images, Audio, Video, Excel).
+* **YouTube Integration:** Automatically downloads and transcribes audio from any YouTube URL using `yt-dlp`.
+* **AI-Powered Q&A:** Uses **Google's Gemini** model to answer questions based *only* on the context provided.
+* **Robust Audio Transcription:** Handles long audio files by intelligently chunking the audio.
+* **Data Management:** A page to view, preview, and delete entries from the knowledge base.
 
 ---
 
-  
+## 📊 System Architecture and Data Flow
 
-## 💻 Tech Stack
+### System Architecture
 
-  
+The application runs as a single Docker container managed by Docker Compose. A Docker Volume ensures the SQLite database persists. The Gemini API key is read from a local `.env` file via Docker Compose.
 
-*  **Frontend:** Streamlit
+```mermaid
+graph LR
+    subgraph User
+        U[User]
+    end
 
-*  **Backend:** Python
+    subgraph Host Machine
+        DC[Docker Compose] --> Reads --> ENV[".env File<br>(User Created)"]
+        DC --> Manages --> DV[Docker Volume<br>db_data]
+        DC --> Runs --> DCON[Docker Container]
+    end
 
-*  **AI Model:** Google Gemini (`gemini-2.5-flash`)
+    subgraph DCON[Docker Container]
+        S[Streamlit UI]
+        P[Python Backend]
+        D(Tesseract-OCR)
+        F(FFmpeg)
+        Y(yt-dlp)
+        S <--> P
+        P --> D
+        P --> F
+        P --> Y
+    end
 
-*  **Database:** SQLite 3
+    subgraph DV[Docker Volume]
+        DB[(SQLite Database<br>extracted_data.db)]
+    end
 
-*  **Audio/Video Processing:**  `yt-dlp`, `moviepy`, `pydub`
+    subgraph External APIs
+        G[Google Gemini API]
+        YT[(YouTube)]
+    end
 
-*  **Text Extraction (OCR):**  `pytesseract`
+    U --> S
+    P <--> DB
+    P --> G[Reads Key via Env Var]
+    Y --> YT
+```    
+## Data Flow
+**Ingestion Flow:**
+```mermaid
+flowchart LR
+    A[User uploads File/URL] --> B[Streamlit UI];
+    B --> C[Python Backend];
+    C --> D{File Type?};
+    D -- Text Files --> E["Extract Text Directly<br>(PDF, DOCX, IMG, XLS)"];
+    D -- Media Files --> F["Download/Extract Audio<br>(Audio, Video, YouTube)"];
+    F --> G["Transcribe Audio Chunks<br>(Google Speech API)"];
+    D -- Other --> H[Show Unsupported Warning];
+    E --> I["Save Text to DB<br>(Docker Volume)"];
+    G --> I;
+    I --> J[Show Success];
+```    
 
-*  **Audio Transcription:**  `SpeechRecognition` (Google Web Speech API)
-
-*  **File Handling:**  `PyPDF2`, `python-docx`, `pandas`, `Pillow`
-
-  
-
----
-
-  
-
-## 🚀 Setup and Installation
-
-  
-
-Follow these steps precisely to get the application running on your local machine.
-
-  
-
-### **Prerequisites (Crucial!)**
-
-  
-
-This application relies on two external command-line tools that **must be installed on your system** and added to your system's PATH.
-
-  
-
-1.  **Tesseract-OCR:** Required for extracting text from images.
-
-*  **Install:** Download and install from the [official Windows installer](https://github.com/UB-Mannheim/tesseract/wiki).
-
-*  **Set Path:**
-
-* After installation (e.g., to `C:\Program Files\Tesseract-OCR`), you must add this folder to your system's **Environment Variables PATH**.
-
-* You must also update the path in `file_processing.py` to point to your `tesseract.exe`:
-
-```python
-
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
+**Q&A:** 
+```mermaid
+flowchart LR
+    A[User asks Question] --> B{Streamlit UI};
+    B --> C[Python Backend];
+    C --> D[Fetch All Text<br>from SQLite DB];
+    D --> E[Format Context];
+    E --> F[Send Context + Question<br>to Google Gemini API];
+    F --> G[Receive Answer];
+    G --> C;
+    C --> B;
+    B --> H[Display Answer to User];
 ```
+## 💻 Tech Stack
+**Containerization:** Docker & Docker Compose
 
-  
+**Frontend:** Streamlit
 
-2.  **FFmpeg:** Required by `pydub` and `moviepy` for processing all audio and video files (MP3, MP4, etc.).
+**Backend:** Python
 
-*  **Install:** Download the latest "essentials" build from [gyan.dev](https://www.gyan.dev/ffmpeg/builds/).
+**AI Model:** Google Gemini (gemini-1.5-flash)
 
-*  **Set Path:**
+**Database:** SQLite 3
 
-* Create a folder like `C:\ffmpeg` and extract the contents there.
+**Audio/Video Processing:** yt-dlp, moviepy, pydub
 
-* Add the `bin` folder (e.g., `C:\ffmpeg\bin`) to your system's **Environment Variables PATH**.
+**Text Extraction (OCR):** pytesseract
 
-*  **Verify:** Open a new command prompt and type `ffmpeg -version`. You should see the version information, not an error.
+**Audio Transcription:** SpeechRecognition (Google Web Speech API)
 
-  
+**File Handling:** PyPDF2, python-docx, pandas, Pillow
 
----
-
-  
-
-### **Installation Steps**
-
-  
+## 🚀 How to Deploy Locally (with Docker)
+This project uses Docker to package the application and all its system dependencies (like FFmpeg and Tesseract). This ensures it runs reliably on your machine.
 
 **1. Clone the Repository**
-
 ```bash
-
-git  clone [https://github.com/your-username/multimodal-project.git](https://github.com/your-username/multimodal-project.git)
-
-cd  multimodal-project
-
+git clone [https://github.com/your-username/multimodal-project.git](https://github.com/your-username/multimodal-project.git)
+cd multimodal-project
 ```
 
-2. Create and Activate a Virtual Environment It's highly recommended to use a virtual environment.
+**2. Create Your API Key File (.env)**
 
-  
-
-```bash
-
-  
-
-# Create the environment
-
-python  -m  venv  vir
-
-  
-
-# Activate it (on Windows)
-
-.\vir\Scripts\activate
+This project requires a ```Google Gemini API key```. You need to create a file named ```.env``` in the root directory of the cloned project. Add your API key to this file like so:
 
 ```
-
-3. Install Python Packages Create a requirements.txt file with the contents below, then run pip install -r requirements.txt.
-
-  
-
-<details>  <summary>Click to see <strong>requirements.txt</strong></summary>
-
-
-
-streamlit
-
-google-generativeai
-
-pytesseract
-
-PyPDF2
-
-python-docx
-
-Pillow
-
-SpeechRecognition
-
-pydub
-
-pandas
-
-openpyxl
-
-xlrd
-
-moviepy
-
-yt-dlp
-
-</details>
-
-  
-
-
-  
-
-# Install all packages
-```bash
-# Install all packages
-pip install -r requirements.txt
+# .env
+GEMINI_API_KEY=AIzaSy...your_actual_key_here
 ```
 
-4. Set Up Your API Key This project uses Streamlit's built-in secrets management.
+(Note: This .env file is listed in .gitignore and should NOT be committed to version control.)
 
+**3. Ensure Project Files Are Present**
+
+Your cloned repository should contain the necessary configuration files: ```requirements.txt```, ```Dockerfile```, and ```docker-compose.yml```.
+
+**4. Run the App with Docker Compose**
+
+Make sure you have ```Docker Desktop``` installed and running on your system.
   
+ **A)  Build and Start the App :**
+ Run this command in your terminal from the project's root directory. Docker Compose will automatically read your .env file.
 
-* Create a folder named .streamlit in the main project directory.
+ ```code
+ docker-compose up -d --build
+ ```
+ (The first time takes longer as it builds the Docker image)
 
-  
+ **B) Access Your App:**   Open your web browser and go to: http://localhost:8501
 
-* Inside that folder, create a file named **secrets.toml**.
+ **C) Stop the App :** To stop the running container:
+ ```code 
+ docker-compose down
+ ```
+ (Your data in extracted_data.db is safe because it's stored in the db_data Docker volume)
 
-  
-
-* Add your Google Gemini API key to this file:
-
-  
-
-
-
-  
-
- .streamlit/secrets.toml
-```
-GEMINI_API_KEY = "your_actual_key_here"
-```
-
-5. Update Your .gitignore Create a .gitignore file in your main project folder to protect your secrets and avoid uploading unnecessary files.
-
-  
-
-```
-  
- .gitignore
-  
-
- Virtual Environment
-vir/
-
-  
- Python cache
-__pycache__/
-
-  
-#Streamlit secrets
-.streamlit/secrets.toml
-
-  ```
-
-# Database
-
-extracted_data.db
-
-# 🏃‍♀️ How to Run the App
-
-With your virtual environment activated, run the following command in your terminal:
-
-  
-
-```bash
-streamlit run app.py
+**D) Start the App Again (Later):**  To start the app without rebuilding:
+```code
+docker-compose up -d
 ```
 
-Streamlit will open the application in your default web browser.
+## 📖 Usage
+Navigate using the sidebar:
 
-  
+*   **Welcome Page (app.py):** Landing page.
 
-**Usage**
+* **1. Upload Data:** Add content via YouTube URL or file upload. Click "Process" to save it to the knowledge base.
 
-Main Page (app.py): This is the landing page. Use the sidebar to navigate.
+* **2. Ask Questions:** View available files in the sidebar. Ask questions about the content; the AI will answer based only on the stored data.
 
-  
-**Upload and Q&A:**
-
-  
-
-Add from YouTube: Paste a YouTube URL and click "Process" to transcribe the audio and add it to the database.
-
-  
-
-Add from File Upload: Upload one or more supported files. Click "Process" to extract their content and save it to the database.
-
-  
-
-Ask a Question: Once you have documents in your knowledge base (visible in the sidebar), type a question and get an AI-generated answer based only on that content.
-
-  
-
-**View Data:**
-
-  
-
-See a list of all documents in your database.
-
-  
-
-Preview the first 100 characters of extracted text.
-
-  
-
-Expand any entry to view the full text.
-
-  
-
-Click the "Delete" button to permanently remove any entry from the knowledge base.
+* **3. View Data:** Browse, preview, and delete entries stored in the knowledge base.
