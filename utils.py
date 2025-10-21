@@ -56,7 +56,12 @@ def delete_row_from_db(row_id):
 @st.cache_data
 def ask_gemini(context, question):
     # For security, use st.secrets for your API key in a real app
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+   # genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        st.error("GEMINI_API_KEY environment variable not set. The app cannot contact the AI.")
+        return "Error: API key not configured."
+    genai.configure(api_key=api_key)
     #genai.configure(api_key="GEMINI_API_KEY") # Replace with your key
     model = genai.GenerativeModel("gemini-2.5-flash")
     prompt = (

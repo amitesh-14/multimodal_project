@@ -12,7 +12,7 @@ from pydub import AudioSegment
 import yt_dlp
 from utils import transcribe_large_audio
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+#pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 @st.cache_data
 def extract_text(uploaded_file):
